@@ -53,16 +53,28 @@ spl_autoload_register( function ( string $class_name ): void {
  * Punto de entrada del plugin.
  * Usamos el hook 'plugins_loaded' para asegurarnos de que
  * WordPress y todos los plugins (incluido LearnDash) están cargados.
+ *
+ * En modo desarrollo (WP_DEBUG = true) carga el simulador de hooks
+ * para poder testear el flujo completo sin LearnDash instalado.
+ *
+ * En producción solo carga el Handler real si LearnDash está activo,
+ * evitando errores si LearnDash no está instalado o se desactiva.
  */
+
 add_action( 'plugins_loaded', function (): void {
 
-    // Solo arrancamos si LearnDash está activo.
-    // Así evitamos errores si LearnDash no está instalado.
+    // En desarrollo cargamos el simulador siempre,
+    // independientemente de si LearnDash está instalado.
+    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        $simulator = new BigSchool\Dev\HookSimulator();
+        $simulator->register();
+    }
+
+    // El handler real solo se carga si LearnDash está instalado.
     if ( ! function_exists( 'learndash_get_lesson_list' ) ) {
         return;
     }
 
-    // Instanciamos el Handler y lo registramos.
     $handler = new BigSchool\Handler\LessonCompletionHandler();
     $handler->register();
 } );
